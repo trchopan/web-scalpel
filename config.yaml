@@ -1,0 +1,66 @@
+# Cellphones
+
+- link: https://cellphones.com.vn/do-choi-cong-nghe/samsung.html
+  source: cellphones.com.vn
+  name: cellphones-samsung-watches
+
+- link: https://cellphones.com.vn/do-choi-cong-nghe/apple-watch.html
+  source: cellphones.com.vn
+  name: cellphones-apple-watches
+
+- link: https://cellphones.com.vn/mobile/apple.html
+  source: cellphones.com.vn
+  name: cellphones-apple-phones
+
+- link: https://cellphones.com.vn/mobile/samsung.html
+  source: cellphones.com.vn
+  name: cellphones-samsung-phones
+
+- link: https://cellphones.com.vn/laptop/mac.html
+  source: cellphones.com.vn
+  name: cellphones-apple-mac
+
+# FPTShop
+
+- link: https://fptshop.com.vn/dien-thoai/apple-iphone
+  source: fptshop.com.vn
+  name: fptshop-apple-phones
+
+- link: https://fptshop.com.vn/dien-thoai/samsung
+  source: fptshop.com.vn
+  name: fptshop-samsung-phones
+
+- link: https://fptshop.com.vn/smartwatch/apple-watch
+  source: fptshop.com.vn
+  name: fptshop-apple-watches
+
+- link: https://fptshop.com.vn/smartwatch/samsung
+  source: fptshop.com.vn
+  name: fptshop-samsung-watches
+
+- link: https://fptshop.com.vn/may-tinh-xach-tay/apple-macbook
+  source: fptshop.com.vn
+  name: fptshop-apple-macbook
+
+# TGDD
+
+- link: https://www.thegioididong.com/dtdd-apple-iphone
+  source: thegioididong.com
+  name: tgdd-apple-phones
+
+- link: https://www.thegioididong.com/dtdd-samsung
+  source: thegioididong.com
+  name: tgdd-samsung-phones
+
+- link: https://www.thegioididong.com/dong-ho-thong-minh-apple
+  source: thegioididong.com
+  name: tgdd-apple-watches
+
+- link: https://www.thegioididong.com/dong-ho-thong-minh-samsung
+  source: thegioididong.com
+  name: tgdd-samsung-watches
+
+- link: https://www.thegioididong.com/laptop-apple-macbook
+  source: thegioididong.com
+  name: tgdd-apple-macbook
+
