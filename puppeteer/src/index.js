@@ -31,17 +31,16 @@ const chunk = (arr, chunkSize) => {
     const processList = yaml.load(fileContents);
 
     try {
-      const browser = await puppeteer.launch();
+      const launchOption = process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : undefined;
+      const browser = await puppeteer.launch(launchOption);
 
       // Process the list by link and download name
       const tasks = processList
         .sort(() => Math.random() - 0.5) // Random to not query one website too much
-        .map(async ({link, name}, index) => {
+        .map(({link, name}, index) => async () => {
           // Not spamming the server by delay abit
           const waitTimeByChunk = index % PROCESSING_CHUNK_SIZE;
-          await new Promise(resolve =>
-            setTimeout(resolve, waitTimeByChunk * 1000)
-          );
+          await new Promise(resolve => setTimeout(resolve, waitTimeByChunk * 1000));
 
           console.log('start >> ', link, name, waitTimeByChunk);
 
@@ -57,13 +56,14 @@ const chunk = (arr, chunkSize) => {
           const html = await page.evaluate(body => body.innerHTML, bodyHandle);
           fs.writeFileSync(outputDir + '/' + name + '.html', html);
           await bodyHandle.dispose();
+          page.close();
 
           console.log('done >> ', link, name);
         });
 
       // Do all tasks async in chunk of tasks
       for (const c of chunk(tasks, PROCESSING_CHUNK_SIZE)) {
-        await Promise.all(c);
+        await Promise.all(c.map(cc => cc()));
       }
 
       await browser.close();
