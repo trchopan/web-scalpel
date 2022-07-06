@@ -16,15 +16,6 @@ if (!existFolder) {
   fs.mkdirSync(outputDir);
 }
 
-const chunk = (arr, chunkSize) => {
-  const res = [];
-  for (let i = 0; i < arr.length; i += chunkSize) {
-    const chunk = arr.slice(i, i + chunkSize);
-    res.push(chunk);
-  }
-  return res;
-};
-
 (async () => {
   try {
     const fileContents = fs.readFileSync(argv.c, 'utf8');
@@ -49,7 +40,7 @@ const chunk = (arr, chunkSize) => {
           const bodyHandle = await page.$('body');
           const bodyBoundingBox = await bodyHandle.boundingBox();
           await page.mouse.wheel({deltaY: bodyBoundingBox.height});
-          await page.waitForTimeout(3 * 1000);
+          await page.waitForTimeout(5 * 1000);
           const html = await page.evaluate(body => body.innerHTML, bodyHandle);
           fs.writeFileSync(path.join(outputDir, name + '.html'), html);
           await bodyHandle.dispose();
@@ -62,7 +53,7 @@ const chunk = (arr, chunkSize) => {
         try {
           await task();
         } catch (err) {
-          console.log('Failed chunk >> retry after 5s');
+          console.log('Failed task >> retry after 5s');
           await new Promise(resolve => setTimeout(resolve, 5000));
           await task();
         }
