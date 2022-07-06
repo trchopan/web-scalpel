@@ -69,18 +69,19 @@ loadConfigsWithOpts opts = do
   initDB conn tableName
   existFolders <- filterM (checkExistDate conn tableName) dateFolders
   putStrLn $ "Exist folders: " ++ show existFolders
+
   when optForce $ mapM_ (deleteByDate conn tableName) existFolders
 
-  let tobeScaped = if optForce
+  let tobeScraped = if optForce
         then dateFolders
         else filter (`notElem` existFolders) dateFolders
 
-  putStrLn $ "Scrape folders: " ++ show tobeScaped
-  mapM_ (scapeNewFolder conn opts configs) tobeScaped
+  putStrLn $ "Scrape folders: " ++ show tobeScraped
+  mapM_ (scrapeFolder conn opts configs) tobeScraped
   where (Opts optConfigPath optDataPath optDb optForce) = opts
 
-scapeNewFolder :: Connection -> Opts -> [Config] -> String -> IO ()
-scapeNewFolder conn opts configs folder = do
+scrapeFolder :: Connection -> Opts -> [Config] -> String -> IO ()
+scrapeFolder conn opts configs folder = do
   putStrLn $ "Scraping " ++ folder
   allProducts <- mapM (openFileAndScrape opts folder) configs
   let products = foldl (<>) [] allProducts
@@ -91,7 +92,7 @@ scapeNewFolder conn opts configs folder = do
 
 openFileAndScrape :: Opts -> String -> Config -> IO [ProductDetail]
 openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
-  openFile (scrapePath <.> "html") ReadMode
+  openFile scrapePath ReadMode
     >>= hGetContents
     >>= (\content -> case source of
           CellphonesVN  -> cellphoneScraper content (fromString date)
@@ -102,7 +103,7 @@ openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
     >>= \case
           Nothing  -> pure []
           Just pds -> pure pds
-  where scrapePath = optDataPath </> date </> name
+  where scrapePath = optDataPath </> date </> name <.> "html"
 
 exitWithErrorMessage :: String -> ExitCode -> IO a
 exitWithErrorMessage str e = hPutStrLn stderr str >> exitWith e

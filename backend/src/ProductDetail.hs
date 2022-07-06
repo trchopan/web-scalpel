@@ -57,13 +57,6 @@ instance FromJSON ProductPrice
 data Source = CellphonesVN | TheGioiDiDong | FptShop | UnknownSource
   deriving (Show, Generic)
 
-instance IsString Source where
-  fromString "cellphones.com.vn" = CellphonesVN
-  fromString "thegioididong.com" = TheGioiDiDong
-  fromString "fptshop.com.vn"    = FptShop
-  fromString _                   = UnknownSource
-
-
 instance ToJSON Source where
   toJSON CellphonesVN  = "cellphones.com.vn"
   toJSON TheGioiDiDong = "thegioididong.com"
@@ -75,6 +68,12 @@ instance FromJSON Source where
   parseJSON "thegioididong.com" = return TheGioiDiDong
   parseJSON "fptshop.com.vn"    = return FptShop
   parseJSON _                   = return UnknownSource
+
+instance IsString Source where
+  fromString "cellphones.com.vn" = CellphonesVN
+  fromString "thegioididong.com" = TheGioiDiDong
+  fromString "fptshop.com.vn"    = FptShop
+  fromString _                   = UnknownSource
 
 scraperForSource :: Source -> Maybe (String -> Text -> IO (Maybe [ProductDetail]))
 scraperForSource = \case
