@@ -1,8 +1,8 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
+const path = require('path');
 const yaml = require('js-yaml');
 
-const PROCESSING_CHUNK_SIZE = 3;
 const BROWSER_TIMEOUT = 20000;
 
 const argv = require('yargs/yargs')(process.argv.slice(2))
@@ -10,7 +10,7 @@ const argv = require('yargs/yargs')(process.argv.slice(2))
   .demandOption(['c', 'd']).argv;
 
 const getDateStr = () => new Date().toJSON().slice(0, 10);
-const outputDir = argv.d + getDateStr();
+const outputDir = path.join(argv.d, getDateStr());
 const existFolder = fs.existsSync(outputDir);
 if (!existFolder) {
   fs.mkdirSync(outputDir);
@@ -37,12 +37,9 @@ const chunk = (arr, chunkSize) => {
       // Process the list by link and download name
       const tasks = processList
         .sort(() => Math.random() - 0.5) // Random to not query one website too much
-        .map(({link, name}, index) => async () => {
+        .map(({link, name}) => async () => {
           // Not spamming the server by delay abit
-          const waitTimeByChunk = index % PROCESSING_CHUNK_SIZE;
-          await new Promise(resolve => setTimeout(resolve, waitTimeByChunk * 1000));
-
-          console.log('start >> ', link, name, waitTimeByChunk);
+          console.log('start >> ', link, name);
 
           const page = await browser.newPage();
           await page.goto(link, {
@@ -54,16 +51,21 @@ const chunk = (arr, chunkSize) => {
           await page.mouse.wheel({deltaY: bodyBoundingBox.height});
           await page.waitForTimeout(3 * 1000);
           const html = await page.evaluate(body => body.innerHTML, bodyHandle);
-          fs.writeFileSync(outputDir + '/' + name + '.html', html);
+          fs.writeFileSync(path.join(outputDir, name + '.html'), html);
           await bodyHandle.dispose();
-          page.close();
+          await page.close();
 
           console.log('done >> ', link, name);
         });
 
-      // Do all tasks async in chunk of tasks
-      for (const c of chunk(tasks, PROCESSING_CHUNK_SIZE)) {
-        await Promise.all(c.map(cc => cc()));
+      for (const task of tasks) {
+        try {
+          await task();
+        } catch (err) {
+          console.log('Failed chunk >> retry after 5s');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          await task();
+        }
       }
 
       await browser.close();
