@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
 import           Config                         ( Config(Config)
@@ -15,21 +16,17 @@ import           Opts                           ( Opts(Opts)
                                                 , parseOpts
                                                 )
 import           ProductDetail                  ( ProductDetail
-                                                , Source
-                                                  ( CellphonesVN
-                                                  , FptShop
-                                                  , TheGioiDiDong
-                                                  , UnknownSource
-                                                  )
-                                                , cellphoneScraper
-                                                , fptScraper
-                                                , tgddScraper
+                                                , scraperForSource
                                                 )
-import           SqlRepo                        ( checkExistDate
-                                                , deleteByDate
-                                                , initDB
-                                                , insertProductDetail
-                                                , tableName
+import           ProductDetailRepo              ( ProductDetailRow
+                                                , ProductPriceRow
+                                                , checkPricesExistDate
+                                                , deletePricesByDate
+                                                , fromProductDetail
+                                                , initPriceTable
+                                                , initProductTable
+                                                , insertPrice
+                                                , upsertProductDetail
                                                 )
 import           System.Directory               ( listDirectory )
 import           System.Exit                    ( ExitCode(ExitFailure)
@@ -66,11 +63,12 @@ loadConfigsWithOpts opts = do
   putStrLn $ "Found folders: " ++ show dateFolders
 
   conn <- open optDb
-  initDB conn tableName
-  existFolders <- filterM (checkExistDate conn tableName) dateFolders
+  initProductTable conn
+  initPriceTable conn
+  existFolders <- filterM (checkPricesExistDate conn) dateFolders
   putStrLn $ "Exist folders: " ++ show existFolders
 
-  when optForce $ mapM_ (deleteByDate conn tableName) existFolders
+  when optForce $ mapM_ (deletePricesByDate conn) existFolders
 
   let tobeScraped = if optForce
         then dateFolders
@@ -80,13 +78,19 @@ loadConfigsWithOpts opts = do
   mapM_ (scrapeFolder conn opts configs) tobeScraped
   where (Opts optConfigPath optDataPath optDb optForce) = opts
 
+
 scrapeFolder :: Connection -> Opts -> [Config] -> String -> IO ()
 scrapeFolder conn opts configs folder = do
   putStrLn $ "Scraping " ++ folder
   allProducts <- mapM (openFileAndScrape opts folder) configs
-  let products = foldl (<>) [] allProducts
 
-  insertProductDetail conn tableName products
+  let products                          = foldl (<>) [] allProducts
+      productRows :: [ProductDetailRow] = map fromProductDetail products
+      priceRows :: [ProductPriceRow]    = map fromProductDetail products
+
+  upsertProductDetail conn productRows
+  insertPrice conn priceRows
+
   putStrLn $ printf "Found %d products" (length products)
   where (Opts optConfigPath optDataPath optDb optForce) = opts
 
@@ -94,11 +98,9 @@ openFileAndScrape :: Opts -> String -> Config -> IO [ProductDetail]
 openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
   openFile scrapePath ReadMode
     >>= hGetContents
-    >>= (\content -> case source of
-          CellphonesVN  -> cellphoneScraper content (fromString date)
-          TheGioiDiDong -> tgddScraper content (fromString date)
-          FptShop       -> fptScraper content (fromString date)
-          UnknownSource -> exitUnknownSource
+    >>= (\content -> case scraperForSource source of
+          Nothing -> exitUnknownSource
+          Just s  -> s content (fromString date)
         )
     >>= \case
           Nothing  -> pure []

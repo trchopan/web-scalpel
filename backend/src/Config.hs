@@ -8,7 +8,7 @@ import           ProductDetail
 
 data Config = Config
   { link   :: String
-  , source :: Source
+  , source :: ProductSource
   , name   :: String
   }
   deriving (Show, Generic)

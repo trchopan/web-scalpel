@@ -31,14 +31,25 @@ import           Text.HTML.Scalpel              ( (@:)
                                                 )
 import           Text.Read                      ( readMaybe )
 
+type ProductName = Text
+type ProductLink = Text
+type ProductImage = Text
+type ProductDate = Text
+
+newtype ProductMoreInfo = ProductMoreInfo [Text]
+  deriving (Show, Generic)
+
+instance FromJSON ProductMoreInfo
+instance ToJSON ProductMoreInfo
+
 data ProductDetail = ProductDetail
-  { name     :: Text
-  , link     :: Text
-  , moreInfo :: [Text]
-  , image    :: Text
+  { name     :: ProductName
+  , link     :: ProductLink
+  , image    :: ProductImage
+  , moreInfo :: ProductMoreInfo
   , price    :: ProductPrice
-  , source   :: Source
-  , date     :: Text
+  , source   :: ProductSource
+  , date     :: ProductDate
   }
   deriving (Show, Generic)
 
@@ -54,40 +65,45 @@ data ProductPrice = ProductPrice
 instance ToJSON ProductPrice
 instance FromJSON ProductPrice
 
-data Source = CellphonesVN | TheGioiDiDong | FptShop | UnknownSource
+data ProductSource = CellphonesVN | TheGioiDiDong | FptShop | UnknownSource
   deriving (Show, Generic)
 
-instance ToJSON Source where
+instance ToJSON ProductSource where
   toJSON CellphonesVN  = "cellphones.com.vn"
   toJSON TheGioiDiDong = "thegioididong.com"
   toJSON FptShop       = "fptshop.com.vn"
   toJSON _             = "unknown-source"
 
-instance FromJSON Source where
+instance FromJSON ProductSource where
   parseJSON "cellphones.com.vn" = return CellphonesVN
   parseJSON "thegioididong.com" = return TheGioiDiDong
   parseJSON "fptshop.com.vn"    = return FptShop
   parseJSON _                   = return UnknownSource
 
-instance IsString Source where
+instance IsString ProductSource where
   fromString "cellphones.com.vn" = CellphonesVN
   fromString "thegioididong.com" = TheGioiDiDong
   fromString "fptshop.com.vn"    = FptShop
   fromString _                   = UnknownSource
 
-scraperForSource :: Source -> Maybe (String -> Text -> IO (Maybe [ProductDetail]))
+scraperForSource
+  :: ProductSource -> Maybe (String -> Text -> IO (Maybe [ProductDetail]))
 scraperForSource = \case
   CellphonesVN  -> Just cellphoneScraper
   TheGioiDiDong -> Just tgddScraper
   FptShop       -> Just fptScraper
   _             -> Nothing
 
-data ScraperResult = ScraperResult Text Text [Text] Text ProductPrice
+data ScraperResult = ScraperResult ProductName
+                                   ProductLink
+                                   ProductImage
+                                   ProductMoreInfo
+                                   ProductPrice
 
 scrapeWithTimeAndSource
   :: String
   -> Scraper String [ScraperResult]
-  -> Source
+  -> ProductSource
   -> Text
   -> IO (Maybe [ProductDetail])
 scrapeWithTimeAndSource str entry source date = do
@@ -95,8 +111,8 @@ scrapeWithTimeAndSource str entry source date = do
   return $ case maybeResult of
     Nothing     -> Nothing
     Just result -> Just $ map
-      (\(ScraperResult name link moreInfo image price) ->
-        ProductDetail name link moreInfo image price source date
+      (\(ScraperResult name link image moreInfo price) ->
+        ProductDetail name link image moreInfo price source date
       )
       result
 
@@ -109,8 +125,8 @@ cellphoneScraper str = scrapeWithTimeAndSource str scrapeEntry CellphonesVN
       $   ScraperResult
       <$> getName
       <*> getLink
-      <*> getMoreInfo
       <*> getImage
+      <*> getMoreInfo
       <*> getPrice
    where
     getName :: Scraper String Text
@@ -126,11 +142,12 @@ cellphoneScraper str = scrapeWithTimeAndSource str scrapeEntry CellphonesVN
         $   attr "href" anySelector
         <&> fromString
 
-    getMoreInfo :: Scraper String [Text]
+    getMoreInfo :: Scraper String ProductMoreInfo
     getMoreInfo =
       chroot ("div" @: [hasClass "item-product__more-info"]) --
         $   texts "p"
         <&> map (strip . fromString)
+        <&> ProductMoreInfo
 
 
     getImage :: Scraper String Text
@@ -164,8 +181,8 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
       $   ScraperResult
       <$> getName
       <*> getLink
-      <*> (getMoreInfoProd <|> getMoreInfoItem)
       <*> getImage
+      <*> (getMoreInfoProd <|> getMoreInfoItem)
       <*> getPrice
    where
     getName :: Scraper String Text
@@ -178,19 +195,21 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
         <&> (++) "https://www.thegioididong.com"
         <&> fromString
 
-    getMoreInfoProd :: Scraper String [Text]
+    getMoreInfoProd :: Scraper String ProductMoreInfo
     getMoreInfoProd =
       chroot ("div" @: [hasClass "prods-group"])
         $   chroot "ul"
         $   chroot ("li" @: [hasClass "item", hasClass "act"])
         $   text anySelector
         <&> (map strip . splitOn "/" . fromString)
+        <&> ProductMoreInfo
 
-    getMoreInfoItem :: Scraper String [Text]
+    getMoreInfoItem :: Scraper String ProductMoreInfo
     getMoreInfoItem =
       chroot ("div" @: [hasClass "item-compare"]) --
         $   texts "span"
         <&> map (strip . fromString)
+        <&> ProductMoreInfo
 
 
     getImage :: Scraper String Text
@@ -226,8 +245,8 @@ fptScraper str = scrapeWithTimeAndSource str scrapeEntry FptShop
       $   ScraperResult
       <$> getName
       <*> getLink
-      <*> getMoreInfo
       <*> getImage
+      <*> getMoreInfo
       <*> (getPrice <|> getPricePromo)
    where
     getName :: Scraper String Text
@@ -244,11 +263,12 @@ fptScraper str = scrapeWithTimeAndSource str scrapeEntry FptShop
         <&> (++) "https://fptshop.com.vn"
         <&> fromString
 
-    getMoreInfo :: Scraper String [Text]
+    getMoreInfo :: Scraper String ProductMoreInfo
     getMoreInfo =
       chroot ("div" @: [hasClass "cdt-product__config__param"])
         $   texts "spans"
         <&> map (strip . fromString)
+        <&> ProductMoreInfo
 
 
     getImage :: Scraper String Text

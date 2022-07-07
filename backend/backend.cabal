@@ -11,6 +11,7 @@ common shared-properties
     , aeson                 ^>=2.0.1.0
     , base                  ^>=4.14.3.0
     , bytestring
+    , containers
     , directory
     , filepath
     , http-types
@@ -49,5 +50,4 @@ library
     Config
     Opts
     ProductDetail
-    ProductDetailRow
-    SqlRepo
+    ProductDetailRepo
