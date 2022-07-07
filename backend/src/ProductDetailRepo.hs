@@ -175,18 +175,17 @@ initProductTable conn =
 commaSeparate :: [T.Text] -> String
 commaSeparate = T.unpack . T.intercalate ","
 
-fieldsWithComma :: [String] -> String
-fieldsWithComma = commaSeparate . map T.pack
-
-questionsFields :: [b] -> String
-questionsFields = commaSeparate . map (const "?")
-
 insertFields :: String -> [String] -> Query
 insertFields tableName fields =
   fromString
     $  unwords
     $  ["INSERT INTO", tableName]
-    <> ["(", fieldsWithComma fields, ") VALUES (", questionsFields fields, ")"]
+    <> ["(", fieldsWithComma, ") VALUES (", questionsFields, ")"]
+ where
+  fieldsWithComma = commaSeparate . map T.pack $ fields
+  questionsFields = commaSeparate . map (const "?") $ fields
+
+
 
 upsertProductDetail :: Connection -> [ProductDetailRow] -> IO ()
 upsertProductDetail conn = mapM_
