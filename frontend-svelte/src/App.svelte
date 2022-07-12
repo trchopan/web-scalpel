@@ -1,53 +1,53 @@
 <script lang="ts">
-  import {onMount} from 'svelte';
-  import axios from 'axios';
-  import Fuse from 'fuse.js';
-  import ProductItem from './lib/ProductItem.svelte';
-  import {isEmpty, last} from 'lodash';
+  import {onMount} from 'svelte'
+  import axios from 'axios'
+  import Fuse from 'fuse.js'
+  import ProductItem from './lib/ProductItem.svelte'
+  import {isEmpty, last} from 'lodash'
 
-  let products: any = [];
-  let selectedProducts: any[] = [];
+  let products: any = []
+  let selectedProducts: any[] = []
 
   const selectProduct = (product: any) => {
-    if (selectedProducts.includes(product)) return;
-    selectedProducts = selectedProducts.concat(product);
-  };
+    if (selectedProducts.includes(product)) return
+    selectedProducts = selectedProducts.concat(product)
+  }
 
   const removeProduct = (product: any) => {
-    console.log('>>>', product, selectedProducts);
+    console.log('>>>', product, selectedProducts)
     selectedProducts = selectedProducts.filter(
       p => p.detail.link !== product.detail.link
-    );
-  };
+    )
+  }
 
-  let fuse: Fuse<any> | null = null;
+  let fuse: Fuse<any> | null = null
 
   const lastList = (prices: {list: number; special: number}[]) =>
-    last(prices)?.list || 0;
+    last(prices)?.list || 0
   const firstSpecial = (prices: {list: number; special: number}[]) =>
-    prices[0]?.special || 0;
+    prices[0]?.special || 0
   const calculateReduction = (aPrice: number, bPrice: number) =>
-    (1 - aPrice / bPrice) * 100;
+    (1 - aPrice / bPrice) * 100
 
   onMount(async () => {
-    const {data} = await axios.get('http://localhost:3000/products');
+    const {data} = await axios.get('http://localhost:3000/products')
     products = data.map(d => {
       const prices = d.prices.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+      )
       const reduction = calculateReduction(
         firstSpecial(prices),
         lastList(prices)
-      );
+      )
       const brandTags = d.detail.name.split(' ').filter(x => {
-        return ['apple', 'samsung'].find(i => x.toLowerCase().includes(i));
-      });
+        return ['apple', 'samsung'].find(i => x.toLowerCase().includes(i))
+      })
       const modelTags = d.detail.name.split(' ').filter(x => {
         return ['galaxy', 'watch', 'macbook', 'pro', 'ultra'].find(i =>
           x.toLowerCase().includes(i)
-        );
-      });
-      const numberTags = d.detail.name.split(' ').filter(x => /[0-9]/.test(x));
+        )
+      })
+      const numberTags = d.detail.name.split(' ').filter(x => /[0-9]/.test(x))
       // console.log('>>>', brandTags, numberTags);
       return {
         ...d,
@@ -56,36 +56,36 @@
         brandTags,
         modelTags,
         reduction,
-      };
-    });
+      }
+    })
 
     // Create the Fuse index
     const options = {
       keys: ['numberTags', 'brandTags', 'detail.name'],
       includeScore: true,
       threshold: 0.8,
-    };
-    const myIndex = Fuse.createIndex(options.keys, products);
-    fuse = new Fuse(products, options, myIndex);
-  });
+    }
+    const myIndex = Fuse.createIndex(options.keys, products)
+    fuse = new Fuse(products, options, myIndex)
+  })
 
-  let searchInput: string = 'galaxy watch 46mm';
-  let searchResult = [];
+  let searchInput: string = 'galaxy watch 46mm'
+  let searchResult = []
 
   $: productList =
-    !searchInput || isEmpty(searchResult) ? products : searchResult;
+    !searchInput || isEmpty(searchResult) ? products : searchResult
 
   const doSearch = () => {
     searchResult = (fuse?.search(searchInput) || []).map(x => ({
       ...x.item,
       score: x.score,
-    }));
-  };
+    }))
+  }
 
   const clearSearch = () => {
-    searchInput = '';
-    searchResult = [];
-  };
+    searchInput = ''
+    searchResult = []
+  }
 </script>
 
 <main>
