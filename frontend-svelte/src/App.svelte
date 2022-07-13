@@ -1,7 +1,6 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import axios from 'axios'
-  import Fuse from 'fuse.js'
   import ProductItem from './lib/ProductItem.svelte'
   import {isEmpty, last} from 'lodash'
 
@@ -14,13 +13,10 @@
   }
 
   const removeProduct = (product: any) => {
-    console.log('>>>', product, selectedProducts)
     selectedProducts = selectedProducts.filter(
       p => p.detail.link !== product.detail.link
     )
   }
-
-  let fuse: Fuse<any> | null = null
 
   const lastList = (prices: {list: number; special: number}[]) =>
     last(prices)?.list || 0
@@ -39,34 +35,11 @@
         firstSpecial(prices),
         lastList(prices)
       )
-      const brandTags = d.detail.name.split(' ').filter(x => {
-        return ['apple', 'samsung'].find(i => x.toLowerCase().includes(i))
-      })
-      const modelTags = d.detail.name.split(' ').filter(x => {
-        return ['galaxy', 'watch', 'macbook', 'pro', 'ultra'].find(i =>
-          x.toLowerCase().includes(i)
-        )
-      })
-      const numberTags = d.detail.name.split(' ').filter(x => /[0-9]/.test(x))
-      // console.log('>>>', brandTags, numberTags);
       return {
         ...d,
-        prices,
-        numberTags,
-        brandTags,
-        modelTags,
         reduction,
       }
     })
-
-    // Create the Fuse index
-    const options = {
-      keys: ['numberTags', 'brandTags', 'detail.name'],
-      includeScore: true,
-      threshold: 0.8,
-    }
-    const myIndex = Fuse.createIndex(options.keys, products)
-    fuse = new Fuse(products, options, myIndex)
   })
 
   let searchInput: string = 'galaxy watch 46mm'
@@ -76,10 +49,22 @@
     !searchInput || isEmpty(searchResult) ? products : searchResult
 
   const doSearch = () => {
-    searchResult = (fuse?.search(searchInput) || []).map(x => ({
-      ...x.item,
-      score: x.score,
-    }))
+    searchResult = products
+      .map(p => ({
+        searchStr:
+          p.detail.name.toLowerCase() +
+          p.detail.moreInfo.map(m => m.toLowerCase()).join(' '),
+        data: p,
+      }))
+      .map(item => ({
+        data: item.data,
+        matches: searchInput
+          .split(' ')
+          .map(s => item.searchStr.includes(s))
+          .filter(r => r).length,
+      }))
+      .sort((a, b) => b.matches - a.matches)
+      .map(item => item.data)
   }
 
   const clearSearch = () => {
@@ -108,9 +93,9 @@
           <button on:click={clearSearch} type="button" class="btn">Clear</button
           >
         </form>
-        <div class="grid grid-cols-3 gap-5">
+        <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
           {#each productList as product}
-            <div class="flex flex-col justify-center">
+            <div class="flex flex-col">
               <ProductItem {product} />
               <div class="flex justify-center my-3">
                 {#if !selectedProducts.includes(product)}
