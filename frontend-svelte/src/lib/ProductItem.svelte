@@ -3,8 +3,6 @@
 
   export let product: any
 
-  const lastList = (prices: {list: number; special: number}[]) =>
-    last(prices)?.list || 0
   const logoImg = (source: string) => {
     switch (source) {
       case 'cellphones.com.vn':
@@ -17,10 +15,10 @@
         return ''
     }
   }
-  const fmtPrice = new Intl.NumberFormat(`vi-VN`, {
+  const fmtPrice = (n: number) => new Intl.NumberFormat(`vi-VN`, {
     currency: `VND`,
     style: 'currency',
-  })
+  }).format(n)
 
   const emptyImg =
     'https://www.pngkey.com/png/full/233-2332677_image-500580-placeholder-transparent.png'
@@ -47,20 +45,23 @@
   </div>
   <div>
     <div>
-      <span class="text-red-400">
-        List Price: {fmtPrice.format(lastList(product.prices))}
+      <span class="text-blue-400">
+        {fmtPrice(product.prices[0]?.special)}
+      </span>
+    </div>
+    <div class="text-sm">
+      <span class="text-red-400 line-through">
+        {fmtPrice(last(product.prices)?.list)}
       </span>
       <span class="text-red-200">
         {product.reduction.toFixed(2)}%
       </span>
     </div>
     {#each product.prices as price, i}
-      <div>
-        <span>Date: {price.date}</span>
+      <div class="text-sm">
+        <span>{price.date}</span>
         <span>-</span>
-        <span class={i === 0 ? 'text-blue-400' : ''}>
-          {fmtPrice.format(price.special)}
-        </span>
+        <span>{fmtPrice(price.special)}</span>
       </div>
     {/each}
   </div>
