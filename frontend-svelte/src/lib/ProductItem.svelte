@@ -24,7 +24,7 @@
     'https://www.pngkey.com/png/full/233-2332677_image-500580-placeholder-transparent.png'
 </script>
 
-<div class="max-w-xs mx-auto">
+<div class="max-w-xs">
   <div>
     <a href={product.detail.link} target="_blank">
       <div
@@ -45,7 +45,7 @@
   </div>
   <div>
     <div>
-      <span class="text-blue-400">
+      <span class="text-blue-400 font-medium">
         {fmtPrice(product.prices[0]?.special)}
       </span>
     </div>
