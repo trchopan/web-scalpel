@@ -4,6 +4,9 @@ module Main where
 import           Config                         ( Config(Config)
                                                 , loadConfigs
                                                 )
+import           Control.Exception              ( IOException
+                                                , handle
+                                                )
 import           Control.Monad                  ( filterM
                                                 , when
                                                 )
@@ -35,7 +38,8 @@ import           System.Exit                    ( ExitCode(ExitFailure)
 import           System.FilePath                ( (<.>)
                                                 , (</>)
                                                 )
-import           System.IO                      ( IOMode(ReadMode)
+import           System.IO                      ( Handle
+                                                , IOMode(ReadMode)
                                                 , hGetContents
                                                 , hPutStrLn
                                                 , openFile
@@ -96,16 +100,29 @@ scrapeFolder conn opts configs folder = do
 
 openFileAndScrape :: Opts -> String -> Config -> IO [ProductDetail]
 openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
-  openFile scrapePath ReadMode
-    >>= hGetContents
+  tryOpenFile scrapePath
+    >>= (\case
+          Nothing -> do
+            putStrLn $ printf "Skip %s." scrapePath
+            return ""
+          Just io -> hGetContents io
+        )
     >>= (\content -> case scraperForSource source of
-          Nothing -> exitUnknownSource
-          Just s  -> s content (fromString date)
+          Nothing      -> exitUnknownSource
+          Just scraper -> scraper content (fromString date)
         )
     >>= \case
           Nothing  -> pure []
           Just pds -> pure pds
   where scrapePath = optDataPath </> date </> name <.> "html"
+
+
+tryOpenFile :: FilePath -> IO (Maybe Handle)
+tryOpenFile path =
+  handle (\(e :: IOException) -> print e >> return Nothing) $ do
+    h <- openFile path ReadMode
+    return (Just h)
+
 
 exitWithErrorMessage :: String -> ExitCode -> IO a
 exitWithErrorMessage str e = hPutStrLn stderr str >> exitWith e
