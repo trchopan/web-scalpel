@@ -4,6 +4,7 @@
 module ProductDetail where
 
 import           Control.Applicative            ( (<|>) )
+import           Control.Monad                  ( guard )
 import           Data.Aeson                     ( FromJSON(parseJSON)
                                                 , ToJSON(toJSON)
                                                 )
@@ -17,6 +18,7 @@ import           Data.Text                      ( Text
                                                 , strip
                                                 , unpack
                                                 )
+import           Debug.Trace                    ( trace )
 import           GHC.Generics                   ( Generic )
 import           Text.HTML.Scalpel              ( (@:)
                                                 , Scraper
@@ -117,11 +119,15 @@ scrapeWithTimeAndSource str entry source date = do
       result
 
 cellphoneScraper :: String -> Text -> IO (Maybe [ProductDetail])
-cellphoneScraper str = scrapeWithTimeAndSource str scrapeEntry CellphonesVN
+cellphoneScraper str = scrapeWithTimeAndSource
+  str
+  (cellphoneSEntryV1 <|> cellphonesEntryV2)
+  CellphonesVN
  where
-  scrapeEntry :: Scraper String [ScraperResult]
-  scrapeEntry =
-    chroots ("div" @: [hasClass "item-product"])
+  cellphoneSEntryV1 :: Scraper String [ScraperResult]
+  cellphoneSEntryV1 =
+    chroot ("div" @: [hasClass "san-pham-cate"])
+      $   chroots ("div" @: [hasClass "item-product"])
       $   ScraperResult
       <$> getName
       <*> getLink
@@ -171,6 +177,47 @@ cellphoneScraper str = scrapeWithTimeAndSource str scrapeEntry CellphonesVN
           . replace "."         ""
           . (strip . fromString)
 
+  cellphonesEntryV2 :: Scraper String [ScraperResult]
+  cellphonesEntryV2 =
+    chroot ("div" @: [hasClass "product-list-filter"])
+      $   chroots ("div" @: [hasClass "product-info-container"])
+      $   ScraperResult
+      <$> getName
+      <*> getLink
+      <*> getImage
+      <*> pure (ProductMoreInfo [])
+      <*> getPrice
+   where
+    getName :: Scraper String Text
+    getName =
+      chroot ("div" @: [hasClass "product__name"])
+        $   text anySelector
+        <&> (strip . fromString)
+
+    getLink :: Scraper String Text
+    getLink = chroot "a" $ attr "href" anySelector <&> fromString
+
+    getImage :: Scraper String Text
+    getImage =
+      chroot ("div" @: [hasClass "product__image"])
+        $   chroot "img"
+        $   attr "data-src" anySelector
+        <&> fromString
+
+    getPrice :: Scraper String ProductPrice
+    getPrice = chroot ("div" @: [hasClass "box-info__box-price"]) $ do
+      special <- text $ "p" @: [hasClass "product__price--show"]
+      price   <- text $ "p" @: [hasClass "product__price--through"]
+      return $ ProductPrice (priceToInt price) (priceToInt special)
+     where
+      priceToInt :: String -> Maybe Integer
+      priceToInt =
+        readMaybe
+          . unpack
+          . replace "\160\8363" ""
+          . replace "."         ""
+          . (strip . fromString)
+
 tgddScraper :: String -> Text -> IO (Maybe [ProductDetail])
 tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
  where
@@ -182,7 +229,7 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
       <$> getName
       <*> getLink
       <*> getImage
-      <*> (getMoreInfoProd <|> getMoreInfoItem)
+      <*> (getMoreInfo <|> pure (ProductMoreInfo []))
       <*> getPrice
    where
     getName :: Scraper String Text
@@ -195,22 +242,14 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
         <&> (++) "https://www.thegioididong.com"
         <&> fromString
 
-    getMoreInfoProd :: Scraper String ProductMoreInfo
-    getMoreInfoProd =
+    getMoreInfo :: Scraper String ProductMoreInfo
+    getMoreInfo =
       chroot ("div" @: [hasClass "prods-group"])
         $   chroot "ul"
         $   chroot ("li" @: [hasClass "item", hasClass "act"])
         $   text anySelector
         <&> (map strip . splitOn "/" . fromString)
         <&> ProductMoreInfo
-
-    getMoreInfoItem :: Scraper String ProductMoreInfo
-    getMoreInfoItem =
-      chroot ("div" @: [hasClass "item-compare"]) --
-        $   texts "span"
-        <&> map (strip . fromString)
-        <&> ProductMoreInfo
-
 
     getImage :: Scraper String Text
     getImage =

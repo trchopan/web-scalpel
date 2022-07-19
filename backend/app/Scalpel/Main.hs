@@ -15,10 +15,13 @@ import           Data.String                    ( IsString(fromString) )
 import           Database.SQLite.Simple         ( Connection
                                                 , open
                                                 )
-import           Opts                           ( Opts(Opts)
+import           Opts                           ( Command(OutputCmd, PersistCmd)
+                                                , OutputOpt(OutputOpt)
+                                                , PersistOpt(PersistOpt)
                                                 , parseOpts
                                                 )
 import           ProductDetail                  ( ProductDetail
+                                                , ProductSource
                                                 , scraperForSource
                                                 )
 import           ProductDetailRepo              ( ProductDetailRow
@@ -52,10 +55,19 @@ import           Text.Regex                     ( matchRegex
 
 
 main :: IO ()
-main = parseOpts >>= loadConfigsWithOpts
+main = parseOpts >>= processOpts
 
-loadConfigsWithOpts :: Opts -> IO ()
-loadConfigsWithOpts opts = do
+processOpts :: Command -> IO ()
+processOpts (PersistCmd opts) = persistProcessor opts
+processOpts (OutputCmd  opts) = outputProcessor opts
+
+
+outputProcessor :: OutputOpt -> IO ()
+outputProcessor opts = openFileAndScrape inputPath source date >>= print
+  where (OutputOpt inputPath source date) = opts
+
+persistProcessor :: PersistOpt -> IO ()
+persistProcessor opts = do
   configs <- loadConfigs optConfigPath
   dirs    <- listDirectory optDataPath
   let dateReg       = mkRegex "[0-9]{4}-[0-9]{2}-[0-9]{2}"
@@ -78,13 +90,13 @@ loadConfigsWithOpts opts = do
 
   putStrLn $ "Scrape folders: " ++ show tobeScraped
   mapM_ (scrapeFolder conn opts configs) tobeScraped
-  where (Opts optConfigPath optDataPath optDb optForce) = opts
+  where (PersistOpt optConfigPath optDataPath optDb optForce) = opts
 
 
-scrapeFolder :: Connection -> Opts -> [Config] -> String -> IO ()
+scrapeFolder :: Connection -> PersistOpt -> [Config] -> String -> IO ()
 scrapeFolder conn opts configs folder = do
   putStrLn $ "Scraping " ++ folder
-  allProducts <- mapM (openFileAndScrape opts folder) configs
+  allProducts <- mapM (openDataPathFileAndScrape opts folder) configs
 
   let products                          = foldl (<>) [] allProducts
       productRows :: [ProductDetailRow] = map fromProductDetail products
@@ -94,10 +106,18 @@ scrapeFolder conn opts configs folder = do
   insertPrice conn priceRows
 
   putStrLn $ printf "Found %d products" (length products)
-  where (Opts optConfigPath optDataPath optDb optForce) = opts
+  where (PersistOpt optConfigPath optDataPath optDb optForce) = opts
 
-openFileAndScrape :: Opts -> String -> Config -> IO [ProductDetail]
-openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
+
+openDataPathFileAndScrape
+  :: PersistOpt -> String -> Config -> IO [ProductDetail]
+openDataPathFileAndScrape (PersistOpt _ optDataPath _ _) date (Config _ source name)
+  = openFileAndScrape scrapePath source date
+  where scrapePath = optDataPath </> date </> name <.> "html"
+
+
+openFileAndScrape :: FilePath -> ProductSource -> String -> IO [ProductDetail]
+openFileAndScrape scrapePath source date =
   tryOpenFile scrapePath
     >>= (\case
           Nothing -> do
@@ -112,7 +132,6 @@ openFileAndScrape (Opts _ optDataPath _ optForce) date (Config _ source name) =
     >>= \case
           Nothing  -> pure []
           Just pds -> pure pds
-  where scrapePath = optDataPath </> date </> name <.> "html"
 
 
 tryOpenFile :: FilePath -> IO (Maybe Handle)
