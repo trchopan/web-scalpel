@@ -52,16 +52,14 @@ import           Text.Regex                     ( matchRegex
 
 
 main :: IO ()
-main = do
-  opts <- parseOpts
-  loadConfigsWithOpts opts
+main = parseOpts >>= loadConfigsWithOpts
 
 loadConfigsWithOpts :: Opts -> IO ()
 loadConfigsWithOpts opts = do
   configs <- loadConfigs optConfigPath
   dirs    <- listDirectory optDataPath
-  let reg           = mkRegex "[0-9]{4}-[0-9]{2}-[0-9]{2}"
-      dateFolders   = filter (isJust . matchRegex reg) dirs
+  let dateReg       = mkRegex "[0-9]{4}-[0-9]{2}-[0-9]{2}"
+      dateFolders   = filter (isJust . matchRegex dateReg) dirs
       outputFolders = map (optDataPath </>) dateFolders
 
   putStrLn $ "Found folders: " ++ show dateFolders
