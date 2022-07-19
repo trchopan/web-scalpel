@@ -20,6 +20,11 @@
   source: cellphones.com.vn
   name: cellphones-apple-mac
 
+- link: https://cellphones.com.vn/thiet-bi-am-thanh/tai-nghe/apple.html
+  source: cellphones.com.vn
+  name: cellphones-apple-earpod
+
+
 # FPTShop
 
 - link: https://fptshop.com.vn/dien-thoai/apple-iphone
@@ -42,6 +47,11 @@
   source: fptshop.com.vn
   name: fptshop-apple-macbook
 
+- link: https://fptshop.com.vn/apple/tai-nghe
+  source: fptshop.com.vn
+  name: fptshop-apple-earpod
+
+
 # TGDD
 
 - link: https://www.thegioididong.com/dtdd-apple-iphone
@@ -63,4 +73,8 @@
 - link: https://www.thegioididong.com/laptop-apple-macbook
   source: thegioididong.com
   name: tgdd-apple-macbook
+
+- link: https://www.thegioididong.com/tai-nghe-apple
+  source: thegioididong.com
+  name: tgdd-apple-earpod
 
