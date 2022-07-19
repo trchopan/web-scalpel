@@ -4,7 +4,6 @@
 module ProductDetail where
 
 import           Control.Applicative            ( (<|>) )
-import           Control.Monad                  ( guard )
 import           Data.Aeson                     ( FromJSON(parseJSON)
                                                 , ToJSON(toJSON)
                                                 )
@@ -18,7 +17,6 @@ import           Data.Text                      ( Text
                                                 , strip
                                                 , unpack
                                                 )
-import           Debug.Trace                    ( trace )
 import           GHC.Generics                   ( Generic )
 import           Text.HTML.Scalpel              ( (@:)
                                                 , Scraper
