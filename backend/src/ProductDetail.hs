@@ -119,18 +119,18 @@ scrapeWithTimeAndSource str entry source date = do
 cellphoneScraper :: String -> Text -> IO (Maybe [ProductDetail])
 cellphoneScraper str = scrapeWithTimeAndSource
   str
-  (cellphoneSEntryV1 <|> cellphonesEntryV2)
+  (cellphoneSScraperV1 <|> cellphoneSScrapperV2)
   CellphonesVN
  where
-  cellphoneSEntryV1 :: Scraper String [ScraperResult]
-  cellphoneSEntryV1 =
+  cellphoneSScraperV1 :: Scraper String [ScraperResult]
+  cellphoneSScraperV1 =
     chroot ("div" @: [hasClass "san-pham-cate"])
       $   chroots ("div" @: [hasClass "item-product"])
       $   ScraperResult
       <$> getName
       <*> getLink
       <*> getImage
-      <*> getMoreInfo
+      <*> (getMoreInfo <|> pure (ProductMoreInfo []))
       <*> getPrice
    where
     getName :: Scraper String Text
@@ -175,8 +175,8 @@ cellphoneScraper str = scrapeWithTimeAndSource
           . replace "."         ""
           . (strip . fromString)
 
-  cellphonesEntryV2 :: Scraper String [ScraperResult]
-  cellphonesEntryV2 =
+  cellphoneSScrapperV2 :: Scraper String [ScraperResult]
+  cellphoneSScrapperV2 =
     chroot ("div" @: [hasClass "product-list-filter"])
       $   chroots ("div" @: [hasClass "product-info-container"])
       $   ScraperResult
@@ -274,16 +274,19 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
 
 
 fptScraper :: String -> Text -> IO (Maybe [ProductDetail])
-fptScraper str = scrapeWithTimeAndSource str scrapeEntry FptShop
+fptScraper str = scrapeWithTimeAndSource str
+                                         (fptScraperV1 <|> fptScraperV2)
+                                         FptShop
  where
-  scrapeEntry :: Scraper String [ScraperResult]
-  scrapeEntry =
-    chroots ("div" @: [hasClass "cdt-product"])
+  fptScraperV1 :: Scraper String [ScraperResult]
+  fptScraperV1 =
+    chroot ("div" @: [hasClass "cdt-product-wrapper"])
+      $   chroots ("div" @: [hasClass "cdt-product"])
       $   ScraperResult
       <$> getName
       <*> getLink
       <*> getImage
-      <*> getMoreInfo
+      <*> (getMoreInfo <|> pure (ProductMoreInfo []))
       <*> (getPrice <|> getPricePromo)
    where
     getName :: Scraper String Text
@@ -324,6 +327,66 @@ fptScraper str = scrapeWithTimeAndSource str scrapeEntry FptShop
     getPricePromo = chroot ("div" @: [hasClass "cdt-product__show-promo"]) $ do
       special <- chroot ("div" @: [hasClass "progress"]) $ text anySelector
       price   <- chroot ("div" @: [hasClass "strike-price"]) $ text "strike"
+      return $ ProductPrice (priceToInt price) (priceToInt special)
+
+    priceToInt :: String -> Maybe Integer
+    priceToInt =
+      readMaybe
+        . unpack
+        . replace " ₫" ""
+        . replace "."  ""
+        . (strip . fromString)
+
+  fptScraperV2 :: Scraper String [ScraperResult]
+  fptScraperV2 =
+    chroot ("div" @: [hasClass "product-grid"])
+      $   chroots ("div" @: [hasClass "product"])
+      $   ScraperResult
+      <$> getName
+      <*> getLink
+      <*> getImage
+      <*> (getMoreInfo <|> pure (ProductMoreInfo []))
+      <*> (getPrice <|> getPricePromo)
+   where
+    getName :: Scraper String Text
+    getName =
+      chroot ("div" @: [hasClass "product_info"])
+        $   text "h3"
+        <&> (strip . fromString)
+
+    getLink :: Scraper String Text
+    getLink =
+      chroot ("div" @: [hasClass "product_info"])
+        $   chroot "a"
+        $   attr "href" anySelector
+        <&> (++) "https://fptshop.com.vn"
+        <&> fromString
+
+    getMoreInfo :: Scraper String ProductMoreInfo
+    getMoreInfo =
+      chroot ("div" @: [hasClass "product__config__param"])
+        $   texts "spans"
+        <&> map (strip . fromString)
+        <&> ProductMoreInfo
+
+
+    getImage :: Scraper String Text
+    getImage =
+      chroot ("div" @: [hasClass "product_img"])
+        $   chroot "img"
+        $   attr "src" anySelector
+        <&> fromString
+
+    getPrice :: Scraper String ProductPrice
+    getPrice = chroot ("div" @: [hasClass "product__price"]) $ do
+      price <- chroot ("div" @: [hasClass "price"]) $ text anySelector
+      return $ ProductPrice (priceToInt price) (priceToInt price)
+
+    getPricePromo :: Scraper String ProductPrice
+    getPricePromo = chroot ("div" @: [hasClass "product_timing"]) $ do
+      special <- chroot ("div" @: [hasClass "product_progress"])
+        $ text anySelector
+      price <- chroot ("div" @: [hasClass "product_strike"]) $ text "strike"
       return $ ProductPrice (priceToInt price) (priceToInt special)
 
     priceToInt :: String -> Maybe Integer
