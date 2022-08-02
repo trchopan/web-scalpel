@@ -26,7 +26,7 @@
     (1 - aPrice / bPrice) * 100
 
   onMount(async () => {
-    const {data} = await axios.get('http://localhost:3000/products')
+    const {data} = await axios.get(import.meta.env.VITE_ENDPOINT + '/products')
     products = data.map(d => {
       const prices = d.prices.sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
