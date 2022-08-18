@@ -62,7 +62,7 @@ parseOpts = execParser optsParser
   optsParser :: ParserInfo Opts
   optsParser = info
     (helper <*> versionOption <*> programOptions)
-    (fullDesc <> progDesc "scraper" <> header "my web scraper")
+    (fullDesc <> progDesc "my-scalpel-server" <> header "my web scraper server")
 
   versionOption :: Parser (a -> a)
   versionOption = infoOption "0.1.0" $ long "version" <> help "Show version"
