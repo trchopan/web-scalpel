@@ -22,7 +22,6 @@ import           Opts                           ( Command(OutputCmd, PersistCmd)
                                                 )
 import           ProductDetail                  ( ProductDetail
                                                 , ProductSource
-                                                , scraperForSource
                                                 )
 import           ProductDetailRepo              ( ProductDetailRow
                                                 , ProductPriceRow
@@ -34,6 +33,7 @@ import           ProductDetailRepo              ( ProductDetailRow
                                                 , insertPrice
                                                 , upsertProductDetail
                                                 )
+import           Scrapers                       ( scraperForSource )
 import           System.Directory               ( listDirectory )
 import           System.Exit                    ( ExitCode(ExitFailure)
                                                 , exitWith
