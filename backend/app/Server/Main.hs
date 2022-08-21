@@ -74,24 +74,24 @@ groupByKey :: Ord k => (v -> k) -> [v] -> Map.Map k [v]
 groupByKey key as = Map.fromListWith (++) as'
   where as' = map ((,) <$> key <*> (: [])) as
 
+mapper
+  :: Map.Map ProductLink [ProductPriceRow]
+  -> ProductDetailRow
+  -> ProductDetailDTO
+mapper pricesMap (ProductDetailRow pLink pName pMoreInfo pImage pSource) =
+  ProductDetailDTO (ProductDetailRowDTO pLink pName pMoreInfo pImage pSource)
+                   (maybe [] (map mapPriceRow) $ Map.lookup pLink pricesMap)
+ where
+  mapPriceRow :: ProductPriceRow -> ProductPriceRowDTO
+  mapPriceRow (ProductPriceRow _ priceDate priceList priceSpecial) =
+    ProductPriceRowDTO priceDate
+                       (fromMaybe 0 priceList)
+                       (fromMaybe 0 priceSpecial)
+
 getProducts :: Connection -> Opts -> ScottyM ()
 getProducts conn (Opts optDbPath) = get "/products" $ do
   products <- liftIO $ queryProductDetails conn
   prices   <- liftIO $ queryProductPrices conn
-  let pricesMap   = groupByKey (\(ProductPriceRow link _ _ _) -> link) prices
-      productsDTO = map (mapper pricesMap) products
-  json productsDTO
- where
-  mapper
-    :: Map.Map ProductLink [ProductPriceRow]
-    -> ProductDetailRow
-    -> ProductDetailDTO
-  mapper pricesMap (ProductDetailRow pLink pName pMoreInfo pImage pSource) =
-    ProductDetailDTO
-      (ProductDetailRowDTO pLink pName pMoreInfo pImage pSource)
-      (maybe [] (map mapPriceRow) $ Map.lookup pLink pricesMap)
-  mapPriceRow :: ProductPriceRow -> ProductPriceRowDTO
-  mapPriceRow (ProductPriceRow priceLink priceDate priceList priceSpecial) =
-    ProductPriceRowDTO priceDate
-                       (fromMaybe 0 priceList)
-                       (fromMaybe 0 priceSpecial)
+  let pricesMap = groupByKey (\(ProductPriceRow link _ _ _) -> link) prices
+
+  json $ map (mapper pricesMap) products

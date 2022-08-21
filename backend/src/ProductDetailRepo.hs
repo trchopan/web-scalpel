@@ -175,6 +175,7 @@ initProductTable conn =
 commaSeparate :: [T.Text] -> String
 commaSeparate = T.unpack . T.intercalate ","
 
+
 insertFields :: String -> [String] -> Query
 insertFields tableName fields =
   fromString
@@ -184,7 +185,6 @@ insertFields tableName fields =
  where
   fieldsWithComma = commaSeparate . map T.pack $ fields
   questionsFields = commaSeparate . map (const "?") $ fields
-
 
 
 upsertProductDetail :: Connection -> [ProductDetailRow] -> IO ()
