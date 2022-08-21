@@ -70,15 +70,15 @@ parseOpts = execParser optsParser
   programOptions :: Parser Opts
   programOptions = Opts <$> strOption (long "db" <> help "Database file")
 
-groupBy :: Ord k => (v -> k) -> [v] -> Map.Map k [v]
-groupBy key as = Map.fromListWith (++) as'
+groupByKey :: Ord k => (v -> k) -> [v] -> Map.Map k [v]
+groupByKey key as = Map.fromListWith (++) as'
   where as' = map ((,) <$> key <*> (: [])) as
 
 getProducts :: Connection -> Opts -> ScottyM ()
 getProducts conn (Opts optDbPath) = get "/products" $ do
   products <- liftIO $ queryProductDetails conn
   prices   <- liftIO $ queryProductPrices conn
-  let pricesMap   = groupBy (\(ProductPriceRow link _ _ _) -> link) prices
+  let pricesMap   = groupByKey (\(ProductPriceRow link _ _ _) -> link) prices
       productsDTO = map (mapper pricesMap) products
   json productsDTO
  where
