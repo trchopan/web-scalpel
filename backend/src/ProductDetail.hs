@@ -16,6 +16,15 @@ type ProductLink = Text
 type ProductImage = Text
 type ProductDate = Text
 
+data ProductPrice = ProductPrice
+  { list    :: Maybe Integer
+  , special :: Maybe Integer
+  }
+  deriving (Show, Generic)
+
+instance ToJSON ProductPrice
+instance FromJSON ProductPrice
+
 newtype ProductMoreInfo = ProductMoreInfo [Text]
   deriving (Show, Generic)
 
@@ -35,15 +44,6 @@ data ProductDetail = ProductDetail
 
 instance ToJSON ProductDetail
 instance FromJSON ProductDetail
-
-data ProductPrice = ProductPrice
-  { list    :: Maybe Integer
-  , special :: Maybe Integer
-  }
-  deriving (Show, Generic)
-
-instance ToJSON ProductPrice
-instance FromJSON ProductPrice
 
 data ProductSource = CellphonesVN | TheGioiDiDong | FptShop | UnknownSource
   deriving (Show, Generic)
@@ -65,4 +65,3 @@ instance IsString ProductSource where
   fromString "thegioididong.com" = TheGioiDiDong
   fromString "fptshop.com.vn"    = FptShop
   fromString _                   = UnknownSource
-
