@@ -58,16 +58,16 @@ main :: IO ()
 main = parseOpts >>= processOpts
 
 processOpts :: Command -> IO ()
-processOpts (PersistCmd opts) = persistProcessor opts
-processOpts (OutputCmd  opts) = outputProcessor opts
+processOpts (PersistCmd opts) = persistHandler opts
+processOpts (OutputCmd  opts) = outputHandler opts
 
 
-outputProcessor :: OutputOpt -> IO ()
-outputProcessor opts = openFileAndScrape inputPath source date >>= print
+outputHandler :: OutputOpt -> IO ()
+outputHandler opts = openFileAndScrape inputPath source date >>= print
   where (OutputOpt inputPath source date) = opts
 
-persistProcessor :: PersistOpt -> IO ()
-persistProcessor opts = do
+persistHandler :: PersistOpt -> IO ()
+persistHandler opts = do
   configs <- loadConfigs optConfigPath
   dirs    <- listDirectory optDataPath
   let dateReg       = mkRegex "[0-9]{4}-[0-9]{2}-[0-9]{2}"
