@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Scrapers where
 
 import           Control.Applicative            ( (<|>) )
@@ -57,20 +58,19 @@ scrapeWithTimeAndSource
   -> ProductSource
   -> Text
   -> IO (Maybe [ProductDetail])
-scrapeWithTimeAndSource str entry source date = do
-  let maybeResult = scrapeStringLike str entry
-  return $ case maybeResult of
-    Nothing     -> Nothing
-    Just result -> Just $ map
-      (\(ScraperResult name link image moreInfo price) ->
-        ProductDetail name link image moreInfo price source date
-      )
-      result
+scrapeWithTimeAndSource inputStr entry source date =
+  return
+    $   (scrapeStringLike inputStr entry :: (Maybe [ScraperResult]))
+    >>= (Just . map resultToProductDetail)
+ where
+  resultToProductDetail :: ScraperResult -> ProductDetail
+  resultToProductDetail (ScraperResult name link image moreInfo price) =
+    ProductDetail name link image moreInfo price source date
 
 
 cellphoneScraper :: String -> Text -> IO (Maybe [ProductDetail])
-cellphoneScraper str = scrapeWithTimeAndSource
-  str
+cellphoneScraper inputStr = scrapeWithTimeAndSource
+  inputStr
   (cellphoneSScraperV1 <|> cellphoneSScrapperV2)
   CellphonesVN
  where
@@ -170,7 +170,9 @@ cellphoneScraper str = scrapeWithTimeAndSource
 
 
 tgddScraper :: String -> Text -> IO (Maybe [ProductDetail])
-tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
+tgddScraper inputStr = scrapeWithTimeAndSource inputStr
+                                               scrapeEntry
+                                               TheGioiDiDong
  where
   scrapeEntry :: Scraper String [ScraperResult]
   scrapeEntry =
@@ -228,9 +230,9 @@ tgddScraper str = scrapeWithTimeAndSource str scrapeEntry TheGioiDiDong
 
 
 fptScraper :: String -> Text -> IO (Maybe [ProductDetail])
-fptScraper str = scrapeWithTimeAndSource str
-                                         (fptScraperV1 <|> fptScraperV2)
-                                         FptShop
+fptScraper inputStr = scrapeWithTimeAndSource inputStr
+                                              (fptScraperV1 <|> fptScraperV2)
+                                              FptShop
  where
   fptScraperV1 :: Scraper String [ScraperResult]
   fptScraperV1 =

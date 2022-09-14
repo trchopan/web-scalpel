@@ -140,9 +140,8 @@ tryOpenFile path =
     h <- openFile path ReadMode
     return (Just h)
 
+exitUnknownSource :: IO a
+exitUnknownSource = exitWithErrorMessage "Unknown Source" (ExitFailure 1)
 
 exitWithErrorMessage :: String -> ExitCode -> IO a
 exitWithErrorMessage str e = hPutStrLn stderr str >> exitWith e
-
-exitUnknownSource :: IO a
-exitUnknownSource = exitWithErrorMessage "Unknown Source" (ExitFailure 1)
