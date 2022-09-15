@@ -58,13 +58,13 @@ main :: IO ()
 main = parseOpts >>= processOpts
 
 processOpts :: Command -> IO ()
-processOpts (PersistCmd opts) = persistHandler opts
 processOpts (OutputCmd  opts) = outputHandler opts
+processOpts (PersistCmd opts) = persistHandler opts
 
 
 outputHandler :: OutputOpt -> IO ()
-outputHandler opts = openFileAndScrape inputPath source date >>= print
-  where (OutputOpt inputPath source date) = opts
+outputHandler (OutputOpt inputPath source date) =
+  openFileAndScrape inputPath source date >>= print
 
 persistHandler :: PersistOpt -> IO ()
 persistHandler opts = do
