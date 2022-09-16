@@ -74,6 +74,14 @@ cellphoneScraper inputStr = scrapeWithTimeAndSource
   (cellphoneSScraperV1 <|> cellphoneSScrapperV2)
   CellphonesVN
  where
+  priceToInt :: String -> Maybe Integer
+  priceToInt =
+    readMaybe
+      . unpack
+      . replace "\160\8363" ""
+      . replace "."         ""
+      . (strip . fromString)
+
   cellphoneSScraperV1 :: Scraper String [ScraperResult]
   cellphoneSScraperV1 =
     chroot ("div" @: [hasClass "san-pham-cate"])
@@ -118,14 +126,6 @@ cellphoneScraper inputStr = scrapeWithTimeAndSource
       special <- text $ "p" @: [hasClass "special-price"]
       price   <- text $ "p" @: [hasClass "old-price"]
       return $ ProductPrice (priceToInt price) (priceToInt special)
-     where
-      priceToInt :: String -> Maybe Integer
-      priceToInt =
-        readMaybe
-          . unpack
-          . replace "\160\8363" ""
-          . replace "."         ""
-          . (strip . fromString)
 
   cellphoneSScrapperV2 :: Scraper String [ScraperResult]
   cellphoneSScrapperV2 =
@@ -136,7 +136,7 @@ cellphoneScraper inputStr = scrapeWithTimeAndSource
       <*> getLink
       <*> getImage
       <*> pure (ProductMoreInfo [])
-      <*> getPrice
+      <*> (getPrice <|> getPriceWithSpecial)
    where
     getName :: Scraper String Text
     getName =
@@ -156,17 +156,16 @@ cellphoneScraper inputStr = scrapeWithTimeAndSource
 
     getPrice :: Scraper String ProductPrice
     getPrice = chroot ("div" @: [hasClass "box-info__box-price"]) $ do
-      special <- text $ "p" @: [hasClass "product__price--show"]
-      price   <- text $ "p" @: [hasClass "product__price--through"]
-      return $ ProductPrice (priceToInt price) (priceToInt special)
-     where
-      priceToInt :: String -> Maybe Integer
-      priceToInt =
-        readMaybe
-          . unpack
-          . replace "\160\8363" ""
-          . replace "."         ""
-          . (strip . fromString)
+      price <- text ("p" @: [hasClass "product__price"])
+        <|> text ("p" @: [hasClass "product__price--show"])
+      return $ ProductPrice (priceToInt price) (priceToInt price)
+
+    getPriceWithSpecial :: Scraper String ProductPrice
+    getPriceWithSpecial =
+      chroot ("div" @: [hasClass "box-info__box-price"]) $ do
+        special <- text $ "p" @: [hasClass "product__price--show"]
+        price   <- text $ "p" @: [hasClass "product__price--through"]
+        return $ ProductPrice (priceToInt price) (priceToInt special)
 
 
 tgddScraper :: String -> Text -> IO (Maybe [ProductDetail])
@@ -174,6 +173,14 @@ tgddScraper inputStr = scrapeWithTimeAndSource inputStr
                                                scrapeEntry
                                                TheGioiDiDong
  where
+  priceToInt :: String -> Maybe Integer
+  priceToInt =
+    readMaybe
+      . unpack
+      . replace "\8363" ""
+      . replace "."     ""
+      . (strip . fromString)
+
   scrapeEntry :: Scraper String [ScraperResult]
   scrapeEntry =
     chroot ("ul" @: [hasClass "listproduct"])
@@ -219,21 +226,16 @@ tgddScraper inputStr = scrapeWithTimeAndSource inputStr
       let specialOrPrice = if null special then price else special
       return $ ProductPrice (priceToInt price) (priceToInt specialOrPrice)
 
-    priceToInt :: String -> Maybe Integer
-    priceToInt =
-      readMaybe
-        . unpack
-        . replace "\8363" ""
-        . replace "."     ""
-        . (strip . fromString)
-
-
 
 fptScraper :: String -> Text -> IO (Maybe [ProductDetail])
 fptScraper inputStr = scrapeWithTimeAndSource inputStr
                                               (fptScraperV1 <|> fptScraperV2)
                                               FptShop
  where
+  priceToInt :: String -> Maybe Integer
+  priceToInt =
+    readMaybe . unpack . replace " ₫" "" . replace "." "" . (strip . fromString)
+
   fptScraperV1 :: Scraper String [ScraperResult]
   fptScraperV1 =
     chroot ("div" @: [hasClass "cdt-product-wrapper"])
@@ -284,14 +286,6 @@ fptScraper inputStr = scrapeWithTimeAndSource inputStr
       special <- chroot ("div" @: [hasClass "progress"]) $ text anySelector
       price   <- chroot ("div" @: [hasClass "strike-price"]) $ text "strike"
       return $ ProductPrice (priceToInt price) (priceToInt special)
-
-    priceToInt :: String -> Maybe Integer
-    priceToInt =
-      readMaybe
-        . unpack
-        . replace " ₫" ""
-        . replace "."  ""
-        . (strip . fromString)
 
   fptScraperV2 :: Scraper String [ScraperResult]
   fptScraperV2 =
@@ -344,11 +338,3 @@ fptScraper inputStr = scrapeWithTimeAndSource inputStr
         $ text anySelector
       price <- chroot ("div" @: [hasClass "product_strike"]) $ text "strike"
       return $ ProductPrice (priceToInt price) (priceToInt special)
-
-    priceToInt :: String -> Maybe Integer
-    priceToInt =
-      readMaybe
-        . unpack
-        . replace " ₫" ""
-        . replace "."  ""
-        . (strip . fromString)
